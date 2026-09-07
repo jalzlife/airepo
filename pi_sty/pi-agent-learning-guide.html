@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Coding Agent 学习指南 — 概念 · 架构 · 特性 · 对比</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg-soft: #161a23;
+    --bg-card: #1b202b;
+    --bg-code: #11141c;
+    --border: #2a3040;
+    --text: #e6e9f0;
+    --text-dim: #9aa3b5;
+    --accent: #4f8cff;
+    --accent-2: #22d3a8;
+    --accent-3: #f59e0b;
+    --accent-4: #f472b6;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 15px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: "SF Mono", "JetBrains Mono", "Fira Code", Consolas, monospace;
+    background: var(--bg-code);
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-size: 0.88em;
+    color: #7dd3fc;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 0.85em;
+    line-height: 1.6;
+  }
+  pre code { background: none; padding: 0; color: #c9d1d9; }
+
+  /* Layout */
+  .wrap { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 264px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--bg-soft);
+    border-right: 1px solid var(--border);
+    padding: 22px 18px;
+  }
+  .sidebar .logo { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .sidebar .logo .pi { color: var(--accent); }
+  .sidebar .sub { font-size: 12px; color: var(--text-dim); margin-bottom: 20px; }
+  .sidebar nav a {
+    display: block;
+    color: var(--text-dim);
+    padding: 6px 10px;
+    border-radius: 7px;
+    font-size: 13.5px;
+    margin-bottom: 2px;
+    text-decoration: none;
+  }
+  .sidebar nav a:hover { background: var(--bg-card); color: var(--text); }
+  .sidebar nav a.sec { font-weight: 600; color: var(--text); margin-top: 12px; font-size: 14px; }
+  .sidebar nav a.sec:first-child { margin-top: 0; }
+
+  .main { flex: 1; min-width: 0; padding: 34px 46px 80px; max-width: 1100px; }
+
+  header.hero {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 34px 36px;
+    background: linear-gradient(135deg, #171c2b 0%, #141824 60%, #1a1424 100%);
+    margin-bottom: 30px;
+  }
+  header.hero h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.3; }
+  header.hero h1 .pi { color: var(--accent); }
+  header.hero .tagline { color: var(--text-dim); font-size: 15px; margin-bottom: 14px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-dim);
+  }
+  .badge.hl { color: var(--accent-2); border-color: rgba(34,211,168,0.35); }
+
+  section { margin-bottom: 42px; }
+  h2 {
+    font-size: 23px;
+    margin: 0 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 20px;
+  }
+  h2 .num { color: var(--accent); margin-right: 10px; font-weight: 700; }
+  h3 { font-size: 17px; margin: 26px 0 10px; scroll-margin-top: 20px; }
+  h3 .dot { color: var(--accent-2); margin-right: 8px; }
+  h4 { font-size: 15px; margin: 18px 0 8px; color: #d7e0f0; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 5px 0; }
+  strong { color: #fff; }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(79,140,255,0.08);
+    padding: 12px 16px;
+    border-radius: 0 10px 10px 0;
+    margin: 16px 0;
+  }
+  .callout.warn { border-color: var(--warn); background: rgba(251,191,36,0.08); }
+  .callout.green { border-color: var(--accent-2); background: rgba(34,211,168,0.08); }
+  .callout.pink { border-color: var(--accent-4); background: rgba(244,114,182,0.08); }
+  .callout .t { font-weight: 700; display: block; margin-bottom: 4px; }
+
+  /* Cards */
+  .grid { display: grid; gap: 14px; }
+  .grid.c2 { grid-template-columns: repeat(2, 1fr); }
+  .grid.c3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.c4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 900px) { .grid.c2,.grid.c3,.grid.c4 { grid-template-columns: 1fr; } .sidebar { display: none; } .main { padding: 20px; } }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .card h4 { margin: 0 0 8px; }
+  .card p { margin: 6px 0; font-size: 13.5px; color: var(--text-dim); }
+  .card .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    background: rgba(79,140,255,0.15);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .card .tag.g { background: rgba(34,211,168,0.15); color: var(--accent-2); }
+  .card .tag.o { background: rgba(245,158,11,0.15); color: var(--accent-3); }
+  .card .tag.p { background: rgba(244,114,182,0.15); color: var(--accent-4); }
+
+  /* Tables */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 640px; }
+  th, td { padding: 10px 13px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; color: #fff; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  td.key { font-weight: 600; color: #fff; white-space: nowrap; background: rgba(255,255,255,0.02); }
+  .yes { color: var(--accent-2); font-weight: 600; }
+  .no { color: var(--danger); font-weight: 600; }
+  .part { color: var(--accent-3); font-weight: 600; }
+
+  /* Architecture diagram */
+  .arch { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
+  .layer {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .layer .lname {
+    width: 150px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12.5px;
+    background: rgba(79,140,255,0.12);
+    border: 1px solid rgba(79,140,255,0.4);
+    color: #cfe0ff;
+    border-radius: 9px;
+    text-align: center;
+    padding: 8px;
+  }
+  .layer .boxes { flex: 1; display: flex; flex-wrap: wrap; gap: 10px; }
+  .box {
+    flex: 1 1 150px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 13px;
+  }
+  .box .bt { font-weight: 700; font-size: 13px; color: #fff; }
+  .box .bd { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+  .box.core { border-color: rgba(79,140,255,0.5); }
+  .box.green { border-color: rgba(34,211,168,0.5); }
+  .box.orange { border-color: rgba(245,158,11,0.5); }
+  .box.pink { border-color: rgba(244,114,182,0.5); }
+
+  /* sequence */
+  .seq { margin: 16px 0; font-size: 13.5px; }
+  .seq .step {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 8px 12px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .seq .step:last-child { border-bottom: none; }
+  .seq .n {
+    flex-shrink: 0;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: rgba(79,140,255,0.2);
+    color: var(--accent);
+    font-weight: 700; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 2px;
+  }
+  .seq .t { color: var(--text-dim); }
+  .seq .t b { color: #fff; }
+
+  .kv { display: grid; grid-template-columns: 170px 1fr; gap: 2px 16px; margin: 12px 0; }
+  .kv .k { font-weight: 600; color: var(--text-dim); font-size: 13.5px; }
+  .kv .v { font-size: 14px; }
+  @media (max-width: 640px) { .kv { grid-template-columns: 1fr; } }
+
+  footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12.5px; }
+  .toc-inline { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+  .toc-inline a {
+    font-size: 12.5px; padding: 5px 12px; border: 1px solid var(--border);
+    border-radius: 20px; color: var(--text-dim);
+  }
+  .toc-inline a:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">🧭 <span class="pi">Pi</span> Coding Agent</div>
+    <div class="sub">学习指南 · 概念/架构/特性/对比</div>
+    <nav>
+      <a href="#overview" class="sec">导 读</a>
+      <a href="#concepts" class="sec">01 · 基本概念</a>
+      <a href="#concept-what">什么是 Pi</a>
+      <a href="#concept-philosophy">核心理念</a>
+      <a href="#concept-terms">关键术语</a>
+      <a href="#concept-quickstart">快速上手</a>
+      <a href="#architecture" class="sec">02 · 技术架构</a>
+      <a href="#arch-overview">总体架构</a>
+      <a href="#arch-packages">核心模块</a>
+      <a href="#arch-runtime">运行时组件</a>
+      <a href="#arch-loop">Agent 执行循环</a>
+      <a href="#arch-session">会话存储模型</a>
+      <a href="#arch-modes">运行模式与 SDK</a>
+      <a href="#features" class="sec">03 · 技术特性</a>
+      <a href="#feat-minimal">极简核心 + 强扩展</a>
+      <a href="#feat-providers">多模型多 Provider</a>
+      <a href="#feat-sessions">会话树与分支</a>
+      <a href="#feat-compaction">上下文压缩</a>
+      <a href="#feat-queue">消息队列</a>
+      <a href="#feat-skills">Skills / 模板 / 主题 / 包</a>
+      <a href="#feat-security">信任与安全</a>
+      <a href="#feat-programmatic">可编程性</a>
+      <a href="#compare" class="sec">04 · 与 Claude Code / Codex 对比</a>
+      <a href="#cmp-overview">三者概览</a>
+      <a href="#cmp-detail">维度详细对比</a>
+      <a href="#cmp-philosophy">设计哲学差异</a>
+      <a href="#cmp-choice">选型建议</a>
+      <a href="#roadmap" class="sec">05 · 学习路径与资源</a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <header class="hero" id="overview">
+      <h1><span class="pi">Pi</span> Coding Agent 学习指南</h1>
+      <div class="tagline">面向云计算售前解决方案架构师 · 系统梳理 Pi 的基本概念、技术架构、技术特性，以及与 Claude Code、OpenAI Codex 的对比</div>
+      <div class="badges">
+        <span class="badge hl">版本 v0.85.1</span>
+        <span class="badge">MIT 开源</span>
+        <span class="badge">TypeScript</span>
+        <span class="badge">终端原生 Coding Harness</span>
+        <span class="badge">官网 pi.dev</span>
+        <span class="badge">源码 github.com/earendil-works/pi-mono</span>
+      </div>
+      <div class="toc-inline">
+        <a href="#concepts">01 基本概念</a>
+        <a href="#architecture">02 技术架构</a>
+        <a href="#features">03 技术特性</a>
+        <a href="#compare">04 对比 Claude Code / Codex</a>
+        <a href="#roadmap">05 学习路径</a>
+      </div>
+    </header>
+
+    <!-- ================= 01 基本概念 ================= -->
+    <section id="concepts">
+      <h2><span class="num">01</span>Pi Agent 基本概念</h2>
+
+      <h3 id="concept-what"><span class="dot">●</span>什么是 Pi</h3>
+      <p>Pi（<code>@earendil-works/pi-coding-agent</code>）是一个<strong>极简的终端编码代理（minimal terminal coding harness / agent）</strong>。它让大语言模型（LLM）获得在本地文件系统中读写文件、编辑代码、执行 Shell 命令的能力，从而像一个"结对编程工程师"一样完成真实开发任务。</p>
+      <p>与 Claude Code、Codex 等工具的核心差异在于：<strong>Pi 刻意保持核心最小化</strong>，不把子代理（sub-agents）、Plan 模式、MCP、权限弹窗等能力"内置"进内核，而是通过一套统一的扩展机制（TypeScript 扩展、Skills、提示模板、主题、Pi 包）让用户按自己的方式构建工作流，<strong>"让工具适应你，而不是你去适应工具"</strong>。</p>
+      <div class="callout">
+        <span class="t">一句话定位</span>
+        Pi = 一个可编程、可扩展、多模型、本地运行的开源终端编码代理；核心极简，能力靠扩展与生态生长。
+      </div>
+
+      <h3 id="concept-philosophy"><span class="dot">●</span>核心理念与设计哲学</h3>
+      <ul>
+        <li><strong>极简内核（Minimal Core）</strong>：默认只给模型 4 个工具 <code>read</code>、<code>write</code>、<code>edit</code>、<code>bash</code>；其余能力按需加载。</li>
+        <li><strong>激进可扩展（Aggressively Extensible）</strong>：几乎所有能力都可以通过扩展（Extension）、技能（Skill）、提示模板（Prompt Template）、主题（Theme）、包（Pi Package）实现，无需 fork 内核。</li>
+        <li><strong>不替你决定工作流</strong>：内置默认值强大，但刻意<strong>不含</strong> MCP、子代理、Plan 模式、权限弹窗、内置待办清单、后台 Bash —— 这些都可以自行构建或安装第三方包。</li>
+        <li><strong>多形态运行</strong>：同一内核以四种模式运行 —— 交互式（interactive）、打印（print）、JSON 事件流、RPC，并可嵌入为 SDK。</li>
+        <li><strong>本地优先、透明可控</strong>：以本地用户权限运行，会话以 JSONL 明文存储，Token/成本/缓存全程可见。</li>
+      </ul>
+      <div class="callout pink">
+        <span class="t">哲学金句（来自官方 README）</span>
+        "Pi is aggressively extensible so it doesn't have to dictate your workflow. Features that other tools bake in can be built with extensions, skills, or installed from third-party pi packages."
+      </div>
+
+      <h3 id="concept-terms"><span class="dot">●</span>关键术语表</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>术语</th><th>含义</th></tr></thead>
+          <tbody>
+            <tr><td class="key">Agent / Harness</td><td>驱动 LLM 完成任务的执行框架；Harness 强调它是"载体/马具"——承载模型与工具协作。</td></tr>
+            <tr><td class="key">Tool（工具）</td><td>模型可调用的能力，如 <code>read</code>/<code>write</code>/<code>edit</code>/<code>bash</code>。内置 8 个，可自定义。</td></tr>
+            <tr><td class="key">Provider / Model</td><td>模型供应商（Anthropic、OpenAI、Google…）与具体模型；支持订阅、API Key、本地 llama.cpp。</td></tr>
+            <tr><td class="key">Thinking Level</td><td>思考/推理档位：<code>off</code>→<code>minimal</code>→<code>low</code>→<code>medium</code>→<code>high</code>→<code>xhigh</code>→<code>max</code>。</td></tr>
+            <tr><td class="key">Session（会话）</td><td>一段对话的持久化记录，以 JSONL 树结构存储，支持原地分支。</td></tr>
+            <tr><td class="key">Compaction（压缩）</td><td>上下文接近窗口上限时，自动/手动把旧消息总结为摘要以释放上下文。</td></tr>
+            <tr><td class="key">Context File</td><td>上下文文件 <code>AGENTS.md</code> / <code>CLAUDE.md</code>，用于注入项目说明、约定、常用命令。</td></tr>
+            <tr><td class="key">Extension（扩展）</td><td>TypeScript 模块，可注册工具、命令、快捷键、事件处理器、自定义 UI、自定义 Provider。</td></tr>
+            <tr><td class="key">Skill（技能）</td><td>遵循 <a href="https://agentskills.io" target="_blank">Agent Skills 标准</a> 的按需能力包（SKILL.md + 脚本/参考文档），渐进式披露。</td></tr>
+            <tr><td class="key">Prompt Template</td><td>可复用的 Markdown 提示模板，通过 <code>/模板名</code> 展开，支持 <code>{{变量}}</code>。</td></tr>
+            <tr><td class="key">Theme（主题）</td><td>终端配色主题（内置 dark/light），热重载。</td></tr>
+            <tr><td class="key">Pi Package</td><td>把扩展、技能、模板、主题打包为 npm/git 包进行分享与安装的机制。</td></tr>
+            <tr><td class="key">Project Trust</td><td>项目信任：首次进入含项目级配置/扩展的目录时需确认，防止仓库静默篡改配置。</td></tr>
+            <tr><td class="key">Steering / Follow-up</td><td>消息队列：运行中 <code>Enter</code> 发送"转向"消息，<code>Alt+Enter</code> 发送"收尾"消息。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="concept-quickstart"><span class="dot">●</span>安装与快速上手</h3>
+      <pre><code># 方式一：npm 全局安装（推荐，--ignore-scripts 跳过安装脚本）
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
+# 方式二：官方安装脚本
+curl -fsSL https://pi.dev/install.sh | sh
+
+# 认证：API Key 方式
+export ANTHROPIC_API_KEY=sk-ant-...
+pi
+
+# 或订阅方式（Claude Pro/Max、ChatGPT Plus/Pro、GitHub Copilot 等）
+pi
+/login        # 选择供应商完成 OAuth
+
+# 进入后直接对话；默认提供 read / write / edit / bash 四个工具
+pi "列出 src/ 下所有 .ts 文件"          # 交互式带初始提示
+pi -p "总结这个代码库"                   # 一次性打印模式
+cat README.md | pi -p "总结这段文字"     # 读取管道 stdin</code></pre>
+    </section>
+
+    <!-- ================= 02 技术架构 ================= -->
+    <section id="architecture">
+      <h2><span class="num">02</span>Pi Agent 技术架构</h2>
+
+      <h3 id="arch-overview"><span class="dot">●</span>总体架构（分层视图）</h3>
+      <p>Pi 采用 <strong>TypeScript monorepo</strong> 组织（仓库 <code>pi-mono</code>），从下到上分为：AI 能力层、Agent 内核层、编码代理/工具层、界面与集成层。核心可执行文件 <code>dist/bundle/cli.js</code> 是一个打包后的 Node.js CLI。</p>
+      <div class="arch">
+        <div class="layer">
+          <div class="lname">界面与集成层<br><small>Modes &amp; SDK</small></div>
+          <div class="boxes">
+            <div class="box core"><div class="bt">Interactive TUI</div><div class="bd">交互式终端界面（编辑器/消息/页脚，快捷键）</div></div>
+            <div class="box core"><div class="bt">Print / JSON / RPC</div><div class="bd">-p 打印、--mode json 事件流、--mode rpc 进程集成</div></div>
+            <div class="box core"><div class="bt">TypeScript SDK</div><div class="bd">createAgentSession() 嵌入自有应用</div></div>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="lname">编码代理层<br><small>coding-agent</small></div>
+          <div class="boxes">
+            <div class="box core"><div class="bt">AgentSession / Runtime</div><div class="bd">会话生命周期、消息队列、模型控制、事件流</div></div>
+            <div class="box core"><div class="bt">SessionManager</div><div class="bd">JSONL 树存储、分支、标签、迁移</div></div>
+            <div class="box core"><div class="bt">Compaction</div><div class="bd">自动/手动上下文压缩与分支总结</div></div>
+            <div class="box core"><div class="bt">ResourceLoader</div><div class="bd">发现扩展/技能/模板/主题/上下文文件</div></div>
+            <div class="box core"><div class="bt">ExtensionRuntime</div><div class="bd">加载 TS 扩展（jiti）、注册工具/命令/事件</div></div>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="lname">Agent 内核层<br><small>agent-core</small></div>
+          <div class="boxes">
+            <div class="box green"><div class="bt">Agent（状态机）</div><div class="bd">AgentMessage、thinking、工具调用循环、streaming</div></div>
+            <div class="box green"><div class="bt">ModelRuntime</div><div class="bd">模型目录、认证解析、刷新、可用性</div></div>
+            <div class="box green"><div class="bt">Event Bus</div><div class="bd">扩展间通信、生命周期事件</div></div>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="lname">AI 能力层<br><small>pi-ai</small></div>
+          <div class="boxes">
+            <div class="box green"><div class="bt">LLM 客户端</div><div class="bd">OpenAI / Anthropic / Google 等 API 适配</div></div>
+            <div class="box green"><div class="bt">类型系统</div><div class="bd">Message / Usage / Cost / StopReason 等核心类型</div></div>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="lname">辅助库</div>
+          <div class="boxes">
+            <div class="box orange"><div class="bt">pi-tui</div><div class="bd">终端 UI 组件库</div></div>
+            <div class="box orange"><div class="bt">pi-protocol / pi-client</div><div class="bd">RPC 协议与客户端</div></div>
+            <div class="box orange"><div class="bt">chord</div><div class="bd">（依赖）底层运行时</div></div>
+            <div class="box pink"><div class="bt">telemetry</div><div class="bd">匿名安装/更新遥测（可关）</div></div>
+          </div>
+        </div>
+      </div>
+
+      <h3 id="arch-packages"><span class="dot">●</span>核心模块（npm 包拆分）</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>包</th><th>职责</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td class="key">@earendil-works/pi-coding-agent</td><td>主包（CLI + SDK + 文档）</td><td>入口 <code>bin: pi</code>，导出 <code>createAgentSession</code> 等 API</td></tr>
+            <tr><td class="key">@earendil-works/pi-ai</td><td>核心 LLM 工具库</td><td>类型定义、各 Provider 客户端、认证、模型目录</td></tr>
+            <tr><td class="key">@earendil-works/pi-agent-core</td><td>Agent 框架</td><td>Agent 状态机、消息模型、流式处理</td></tr>
+            <tr><td class="key">@earendil-works/pi-tui</td><td>终端 UI 组件</td><td>构建交互界面与扩展自定义 UI</td></tr>
+            <tr><td class="key">@earendil-works/pi-protocol / pi-client</td><td>RPC 协议与客户端</td><td>跨语言/跨进程集成</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="arch-runtime"><span class="dot">●</span>关键运行时组件</h3>
+      <div class="grid c3">
+        <div class="card"><span class="tag">ModelRuntime</span><h4>模型与认证中枢</h4><p>管理 30+ Provider 的模型目录，解析认证优先级（运行时覆盖 → auth.json → 环境变量 → 自定义回退），支持目录缓存与限流刷新。</p></div>
+        <div class="card"><span class="tag g">AgentSession</span><h4>会话生命周期</h4><p>管理消息历史、模型状态、压缩、事件流；提供 <code>prompt()</code> / <code>steer()</code> / <code>followUp()</code> / <code>subscribe()</code> / <code>navigateTree()</code>。</p></div>
+        <div class="card"><span class="tag g">SessionManager</span><h4>会话树存储</h4><p>JSONL 文件读写，<code>id/parentId</code> 树结构，分支、标签、版本迁移（v1→v3）。</p></div>
+        <div class="card"><span class="tag o">ResourceLoader</span><h4>资源发现</h4><p>扫描全局/项目目录，发现扩展、技能、模板、主题、上下文文件（AGENTS.md/CLAUDE.md）。</p></div>
+        <div class="card"><span class="tag o">ExtensionRuntime</span><h4>扩展运行时</h4><p>通过 jiti 直接加载 TypeScript 扩展，注册工具/命令/快捷键/事件处理器，支持异步工厂。</p></div>
+        <div class="card"><span class="tag p">SettingsManager</span><h4>配置管理</h4><p>全局 <code>~/.pi/agent/settings.json</code> 与项目 <code>.pi/settings.json</code> 合并，项目覆盖全局。</p></div>
+      </div>
+
+      <h3 id="arch-loop"><span class="dot">●</span>Agent 执行循环（一次请求的流程）</h3>
+      <div class="seq">
+        <div class="step"><div class="n">1</div><div class="t"><b>组装上下文</b>：系统提示 + 上下文文件（AGENTS.md）+ 技能描述（XML）+ 会话历史/压缩摘要 + 用户提示。</div></div>
+        <div class="step"><div class="n">2</div><div class="t"><b>调用 LLM</b>：通过 ModelRuntime 选中模型（含思考档位）发起请求，流式返回文本/思考/工具调用。</div></div>
+        <div class="step"><div class="n">3</div><div class="t"><b>工具执行</b>：模型发起 tool call（如 <code>bash</code>、<code>edit</code>），先经扩展事件（如权限门禁）拦截/放行，再执行并返回结果。</div></div>
+        <div class="step"><div class="n">4</div><div class="t"><b>结果回填</b>：工具结果追加到会话，进入下一轮推理；期间可接收 steering/follow-up 队列消息。</div></div>
+        <div class="step"><div class="n">5</div><div class="t"><b>上下文检查</b>：若 tokens 超过 <code>contextWindow - reserveTokens</code>，触发自动压缩（compaction）后继续。</div></div>
+        <div class="step"><div class="n">6</div><div class="t"><b>持久化与事件</b>：每个消息/工具调用实时写入 JSONL 会话文件，并通过事件总线广播（供 TUI、扩展、SDK 消费）。</div></div>
+      </div>
+
+      <h3 id="arch-session"><span class="dot">●</span>会话存储模型（JSONL 树）</h3>
+      <p>会话保存在 <code>~/.pi/agent/sessions/--&lt;路径&gt;--/&lt;时间戳&gt;_&lt;uuid&gt;.jsonl</code>，每行一个 JSON 条目，通过 <code>id</code>/<code>parentId</code> 构成树，支持<strong>原地分支</strong>（不需要新建文件）。</p>
+      <pre><code>┌ header ─ user: "你好" ─ assistant: "当然！…"
+│                                    ├─ user: "方案A…" ─ assistant: "方案A…" ─ user: "成功" ← 当前活动叶子
+│                                    └─ user: "其实方案B…" ─ assistant: "方案B…"   ← 另一条分支
+# 条目类型：user / assistant / toolResult / bash_execution / compaction /
+#          branch_summary / model_change / thinking_level / label / custom 等</code></pre>
+      <div class="kv">
+        <div class="k">分支操作</div><div class="v"><code>/tree</code>（原地切换分支）、<code>/fork</code>（从历史消息另开新会话）、<code>/clone</code>（复制当前分支到新会话）</div>
+        <div class="k">迁移机制</div><div class="v">旧版本会话（v1 线性、v2 树）自动迁移到 v3</div>
+        <div class="k">导出/分享</div><div class="v"><code>/export</code> 导出 HTML/JSONL，<code>/share</code> 上传私有 GitHub Gist</div>
+      </div>
+
+      <h3 id="arch-modes"><span class="dot">●</span>四种运行模式 + SDK</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>模式</th><th>命令</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td class="key">交互式</td><td><code>pi</code>（默认）</td><td>日常开发对话，完整 TUI、快捷键、消息队列</td></tr>
+            <tr><td class="key">打印模式</td><td><code>pi -p "…"</code></td><td>一次性问答，输出后退出；支持管道 stdin</td></tr>
+            <tr><td class="key">JSON 模式</td><td><code>pi --mode json</code></td><td>输出结构化事件流（JSON Lines），供脚本/管道解析</td></tr>
+            <tr><td class="key">RPC 模式</td><td><code>pi --mode rpc</code></td><td>stdin/stdout 上跑 JSONL 协议，供非 Node.js 进程集成</td></tr>
+            <tr><td class="key">SDK</td><td><code>createAgentSession()</code></td><td>嵌入 Node.js 应用，构建自定义 UI/自动化流水线</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <pre><code>import { createAgentSession, ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
+
+const modelRuntime = await ModelRuntime.create();
+const { session } = await createAgentSession({
+  sessionManager: SessionManager.inMemory(),
+  modelRuntime,
+});
+
+session.subscribe((e) =&gt; {
+  if (e.type === "message_update" &amp;&amp; e.assistantMessageEvent.type === "text_delta") {
+    process.stdout.write(e.assistantMessageEvent.delta);
+  }
+});
+await session.prompt("当前目录有哪些文件？");</code></pre>
+    </section>
+
+    <!-- ================= 03 技术特性 ================= -->
+    <section id="features">
+      <h2><span class="num">03</span>Pi Agent 技术特性</h2>
+
+      <h3 id="feat-minimal"><span class="dot">●</span>极简核心 + 激进可扩展</h3>
+      <div class="grid c2">
+        <div class="card"><span class="tag">内核</span><h4>默认 4 工具 + 8 内置工具</h4><p>默认 <code>read/write/edit/bash</code>；完整内置 <code>read/bash/powershell/edit/write/grep/find/ls</code>。可用 <code>--tools</code> 白名单、<code>--exclude-tools</code> 禁用、<code>--no-tools</code> 全关（如只读审计模式）。</p></div>
+        <div class="card"><span class="tag g">扩展</span><h4>TypeScript 扩展（无编译）</h4><p>通过 jiti 直接加载 <code>.ts</code>，可：自定义工具、替换内置工具、子代理、Plan 模式、权限门禁、路径保护、自定义压缩、自定义 UI、MCP 集成、Git 自动提交…</p></div>
+      </div>
+      <pre><code>// ~/.pi/agent/extensions/my-ext.ts —— 一个最小扩展
+export default function (pi) {
+  pi.on("tool_call", async (event, ctx) =&gt; {
+    if (event.toolName === "bash" &amp;&amp; event.input.command?.includes("rm -rf")) {
+      const ok = await ctx.ui.confirm("危险操作", "允许执行 rm -rf？");
+      if (!ok) return { block: true, reason: "用户拒绝" };
+    }
+  });
+  pi.registerTool({ name: "greet", label: "Greet", description: "打招呼",
+    parameters: Type.Object({ name: Type.String() }),
+    execute: async (_id, p) =&gt; ({ content: [{ type: "text", text: `Hello ${p.name}` }], details: {} }) });
+}</code></pre>
+
+      <h3 id="feat-providers"><span class="dot">●</span>多模型、多 Provider、本地模型</h3>
+      <ul>
+        <li><strong>订阅登录</strong>：Claude Pro/Max、ChatGPT Plus/Pro（Codex）、GitHub Copilot、xAI、OpenRouter、Radius。</li>
+        <li><strong>API Key</strong>：Anthropic、OpenAI、Azure OpenAI、DeepSeek、NVIDIA NIM、Google Gemini/Vertex、Amazon Bedrock、Mistral、Groq、Cerebras、Cloudflare、xAI、OpenRouter、Hugging Face、Fireworks、Together、MiniMax、Kimi、小米 MiMo 等 <strong>30+ 供应商</strong>。</li>
+        <li><strong>本地模型</strong>：内置 llama.cpp 路由服务器，<code>/llama</code> 下载/加载/卸载模型，<code>/model</code> 切换。</li>
+        <li><strong>模型热切换与循环</strong>：<code>/model</code> 或 <code>Ctrl+L</code> 切换，<code>Ctrl+P</code> 在 scoped models 间循环；<code>Ctrl+S</code> 保存启动默认。</li>
+        <li><strong>思考档位</strong>：<code>--thinking</code> 与 <code>/thinking</code> 控制 <code>off→max</code> 七档，可配每档 token 预算。</li>
+        <li><strong>自定义 Provider</strong>：<code>models.json</code> 声明兼容 OpenAI/Anthropic/Google 协议的 API；扩展可注册自定义 API/OAuth。</li>
+      </ul>
+
+      <h3 id="feat-sessions"><span class="dot">●</span>会话树、分支与恢复</h3>
+      <div class="grid c3">
+        <div class="card"><span class="tag">树形分支</span><h4>原地探索备选方案</h4><p>所有历史保存在单个 JSONL 文件，<code>/tree</code> 跳转到任意历史点继续，<code>/fork</code>/<code>/clone</code> 另存新会话。</p></div>
+        <div class="card"><span class="tag g">自动保存</span><h4>会话按项目组织</h4><p>自动保存到 <code>~/.pi/agent/sessions/</code>；<code>pi -c</code> 继续最近会话、<code>pi -r</code> 浏览选择、<code>--no-session</code> 临时模式。</p></div>
+        <div class="card"><span class="tag o">标签</span><h4>书签与时间戳</h4><p><code>/tree</code> 内 <code>Shift+L</code> 打标签、<code>Shift+T</code> 切换时间戳，便于标记关键节点。</p></div>
+      </div>
+
+      <h3 id="feat-compaction"><span class="dot">●</span>上下文压缩（Compaction）与分支总结</h3>
+      <p>长会话超出上下文窗口时自动压缩，把旧消息总结为结构化摘要，保留最近内容继续工作：</p>
+      <div class="kv">
+        <div class="k">触发条件</div><div class="v"><code>contextTokens &gt; contextWindow - reserveTokens</code>（默认预留 16384 tokens）</div>
+        <div class="k">保留策略</div><div class="v">保留最近 <code>keepRecentTokens</code>（默认 20000）tokens，其余总结</div>
+        <div class="k">手动触发</div><div class="v"><code>/compact [自定义指令]</code></div>
+        <div class="k">分支总结</div><div class="v"><code>/tree</code> 切换分支时可总结被放弃的分支，把上下文带入新分支</div>
+        <div class="k">扩展定制</div><div class="v"><code>session_before_compact</code> / <code>session_before_tree</code> 事件可拦截或自定义总结</div>
+      </div>
+      <p>摘要采用统一结构化格式（目标/约束/进度/关键决策/下一步/已读已改文件清单），并累积追踪文件操作。</p>
+
+      <h3 id="feat-queue"><span class="dot">●</span>消息队列（Steering / Follow-up）</h3>
+      <p>Agent 运行中仍可提交消息，实现"边跑边指挥"：</p>
+      <ul>
+        <li><strong>Enter</strong> → 排队一条 <em>steering</em> 消息，在当前回合工具调用完成后立即送达；</li>
+        <li><strong>Alt+Enter</strong> → 排队一条 <em>follow-up</em> 消息，等 Agent 全部工作结束后送达；</li>
+        <li><strong>Escape</strong> 中止并恢复队列消息，<strong>Alt+Up</strong> 取回消息重新编辑。</li>
+      </ul>
+
+      <h3 id="feat-skills"><span class="dot">●</span>Skills / Prompt Templates / Themes / Pi Packages</h3>
+      <div class="grid c2">
+        <div class="card"><span class="tag">Skills</span><h4>遵循 Agent Skills 标准</h4><p><code>SKILL.md</code>（frontmatter + 指令）+ 脚本/参考文档，按需加载（渐进式披露）。<strong>可直接复用 Claude Code（~/.claude/skills）与 Codex（~/.codex/skills）的技能目录</strong>。通过 <code>/skill:name</code> 调用。</p></div>
+        <div class="card"><span class="tag g">Prompt Templates</span><h4>可复用 Markdown 提示</h4><p>放在 <code>~/.pi/agent/prompts/</code> 或 <code>.pi/prompts/</code>，支持 <code>{{变量}}</code> 占位，<code>/模板名</code> 展开。</p></div>
+        <div class="card"><span class="tag o">Themes</span><h4>终端主题热重载</h4><p>内置 dark/light，放在主题目录即自动发现，修改文件立即生效。</p></div>
+        <div class="card"><span class="tag p">Pi Packages</span><h4>npm/git 打包分享</h4><p><code>pi install npm:@foo/bar</code> 或 <code>git:github.com/u/r@v1</code>；<code>package.json</code> 的 <code>pi</code> 字段声明资源，形成第三方生态。</p></div>
+      </div>
+
+      <h3 id="feat-security"><span class="dot">●</span>项目信任与安全模型</h3>
+      <div class="callout warn">
+        <span class="t">重要安全边界</span>
+        Pi <strong>不内置沙箱</strong>，以启动它的本地用户权限运行；项目信任只是"输入加载防护"，不是安全沙箱。运行不信任代码/自动化任务应放到容器、VM 或微 VM（官方提供 Gondolin、Docker、OpenShell 方案）。
+      </div>
+      <ul>
+        <li><strong>项目信任</strong>：首次进入含 <code>.pi/settings.json</code>、<code>.pi/extensions</code> 等资源的目录时询问是否信任；决定写入 <code>~/.pi/agent/trust.json</code>；非交互模式用 <code>--approve/--no-approve</code> 或 <code>defaultProjectTrust</code> 控制。</li>
+        <li><strong>无权限弹窗</strong>：刻意不内置确认弹窗，建议在容器中运行或通过扩展构建符合企业安全要求的确认流程。</li>
+        <li><strong>遥测可关</strong>：<code>PI_OFFLINE=1</code>、<code>PI_TELEMETRY=0</code>、<code>PI_SKIP_VERSION_CHECK=1</code> 均可关闭联网行为。</li>
+      </ul>
+
+      <h3 id="feat-programmatic"><span class="dot">●</span>可观测、可编程、可集成</h3>
+      <div class="grid c3">
+        <div class="card"><span class="tag">成本可观测</span><h4>Token/缓存/费用实时</h4><p>页脚显示输入/输出 token、缓存读/写（R/W）、缓存命中率（CH）、成本、上下文占用，总量含工具与总结消耗。</p></div>
+        <div class="card"><span class="tag g">事件流</span><h4>全事件订阅</h4><p>text_delta / thinking_delta / tool_execution / compaction / turn / agent 生命周期事件，可被 TUI、扩展、SDK 消费。</p></div>
+        <div class="card"><span class="tag o">进程集成</span><h4>SDK / RPC / JSON</h4><p>同一内核暴露 SDK（同进程类型安全）与 RPC（跨语言进程隔离）两种集成路径，另有 JSON 事件流。</p></div>
+      </div>
+      <pre><code># 只读审计（仅允许读取类工具）
+pi --tools read,grep,find,ls -p "审查这份代码"
+
+# CI 无头运行
+pi --mode rpc --no-session
+# 环境变量注入给 bash 工具：PI_SESSION_ID / PI_MODEL / PI_PROVIDER / PI_REASONING_LEVEL</code></pre>
+    </section>
+
+    <!-- ================= 04 对比 ================= -->
+    <section id="compare">
+      <h2><span class="num">04</span>Pi Agent vs Claude Code vs OpenAI Codex</h2>
+
+      <h3 id="cmp-overview"><span class="dot">●</span>三者概览</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>维度</th><th>Pi Coding Agent</th><th>Claude Code</th><th>OpenAI Codex CLI</th></tr></thead>
+          <tbody>
+            <tr><td class="key">出品方</td><td>独立开源社区（earendil-works，Mario Zechner）</td><td>Anthropic</td><td>OpenAI</td></tr>
+            <tr><td class="key">定位</td><td>极简、可编程的终端编码 Harness</td><td>Anthropic 官方代理式编码工具</td><td>OpenAI 官方代理式编码工具</td></tr>
+            <tr><td class="key">语言/栈</td><td>TypeScript（Node.js，可编译为单二进制）</td><td>TypeScript（Node.js）</td><td>Rust</td></tr>
+            <tr><td class="key">开源/许可</td><td class="yes">开源（MIT）</td><td class="part">CLI 已开源（Source-available）</td><td class="part">CLI 已开源（Apache-2.0）</td></tr>
+            <tr><td class="key">原生模型</td><td>多模型（30+ Provider，订阅 + API Key + 本地）</td><td>Claude 为主（支持其他模型路由）</td><td>GPT/Codex 为主（支持其他模型）</td></tr>
+            <tr><td class="key">默认界面</td><td>终端 TUI</td><td>终端 + IDE + Web</td><td>终端 + IDE + 云端（codex web）</td></tr>
+            <tr><td class="key">配置目录</td><td><code>~/.pi/agent/</code></td><td><code>~/.claude/</code></td><td><code>~/.codex/</code></td></tr>
+            <tr><td class="key">上下文文件</td><td>AGENTS.md / CLAUDE.md（兼容两者）</td><td>CLAUDE.md</td><td>AGENTS.md</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="cmp-detail"><span class="dot">●</span>功能维度详细对比</h3>
+      <div class="callout">
+        <span class="t">说明</span>
+        下表标注：✅ 内置 · 🔌 通过扩展/插件/第三方 · ❌ 无（或需自行构建）。三者都在快速迭代，具体能力以官方最新文档为准（数据整理时间：Pi v0.85.1）。
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th style="min-width:150px">能力维度</th><th>Pi Coding Agent</th><th>Claude Code</th><th>OpenAI Codex CLI</th></tr></thead>
+          <tbody>
+            <tr><td class="key">核心设计</td><td>极简内核 + 扩展驱动</td><td>功能齐全、开箱即用</td><td>功能齐全、开箱即用</td></tr>
+            <tr><td class="key">内置文件/执行工具</td><td>read / write / edit / bash（+grep/find/ls/powershell）</td><td>Read / Write / Edit / Bash / Glob / Grep / WebFetch 等</td><td>shell / read / write / edit / grep / glob 等</td></tr>
+            <tr><td class="key">子代理（Sub-agents）</td><td>❌ 内置无（扩展/包实现）</td><td class="yes">✅ 内置 + 自定义子代理</td><td class="yes">✅ 内置（codex 支持 subagents）</td></tr>
+            <tr><td class="key">Plan 模式</td><td>❌ 内置无（扩展/写文件实现）</td><td class="yes">✅ 内置 plan mode</td><td class="yes">✅ 内置（plan 模式）</td></tr>
+            <tr><td class="key">MCP 支持</td><td>❌ 内置无（扩展接入）</td><td class="yes">✅ 原生 MCP 客户端</td><td class="yes">✅ 原生 MCP 客户端</td></tr>
+            <tr><td class="key">权限/审批模型</td><td>无弹窗（扩展自定义 + 项目信任）</td><td class="yes">✅ 权限系统（allow/ask/deny、模式、hooks）</td><td class="yes">✅ 审批模式（suggest/full-auto 等）</td></tr>
+            <tr><td class="key">沙箱/隔离</td><td>❌ 无内置（建议容器/VM）</td><td class="part">🔌 建议外部沙箱（如 OS 级）</td><td class="yes">✅ 内置沙箱（macOS seatbelt / Linux landlock+seccomp）</td></tr>
+            <tr><td class="key">Skills / 技能</td><td class="yes">✅ Agent Skills（可复用 Claude/Codex 技能）</td><td class="yes">✅ Agent Skills（SKILL.md）</td><td class="yes">✅ Skills（SKILL.md）</td></tr>
+            <tr><td class="key">斜杠命令 / 模板</td><td class="yes">✅ /命令 + 提示模板</td><td class="yes">✅ 斜杠命令 + 自定义</td><td class="yes">✅ 斜杠命令 + 自定义</td></tr>
+            <tr><td class="key">Hooks / 事件钩子</td><td class="part">🔌 扩展事件（tool_call 等）</td><td class="yes">✅ Hooks（PreToolUse/PostToolUse 等）</td><td class="yes">✅ 事件/hooks 机制</td></tr>
+            <tr><td class="key">会话恢复</td><td class="yes">✅ resume + 树分支</td><td class="yes">✅ resume + checkpoint 回滚</td><td class="yes">✅ resume（session）</td></tr>
+            <tr><td class="key">会话树/分支</td><td class="yes">✅ 原地树分支（/tree /fork /clone）</td><td class="part">🔌 checkpoint/rewind 为主</td><td class="part">🔌 分支能力较弱</td></tr>
+            <tr><td class="key">上下文压缩</td><td class="yes">✅ 自动 + 手动 + 分支总结（可定制）</td><td class="yes">✅ 自动 compact + /compact</td><td class="yes">✅ 自动 + /compact</td></tr>
+            <tr><td class="key">思考/推理控制</td><td class="yes">✅ 7 档 thinking + 每档 token 预算</td><td class="yes">✅ 思考预算/模式</td><td class="yes">✅ 推理 effort 控制</td></tr>
+            <tr><td class="key">多模型/多 Provider</td><td class="yes">✅ 非常强（30+，含本地 llama.cpp）</td><td class="part">🔌 支持但以 Claude 为中心</td><td class="part">🔌 支持但以 OpenAI 为中心</td></tr>
+            <tr><td class="key">本地模型</td><td class="yes">✅ 内置 llama.cpp 路由</td><td class="part">🔌 有限</td><td class="part">🔌 有限</td></tr>
+            <tr><td class="key">无头/CI 模式</td><td class="yes">✅ -p / JSON / RPC</td><td class="yes">✅ -p / headless / SDK</td><td class="yes">✅ exec（非交互）/ SDK</td></tr>
+            <tr><td class="key">编程接口（SDK）</td><td class="yes">✅ TypeScript SDK + RPC</td><td class="yes">✅ Claude Agent SDK</td><td class="yes">✅ Codex SDK</td></tr>
+            <tr><td class="key">IDE 集成</td><td class="part">🔌 无官方 IDE 插件（终端为主）</td><td class="yes">✅ VS Code / JetBrains 等</td><td class="yes">✅ VS Code / 云端 / 网页</td></tr>
+            <tr><td class="key">第三方插件/包生态</td><td class="yes">✅ Pi Packages（npm/git）</td><td class="yes">✅ Plugin Marketplace</td><td class="yes">✅ 插件生态（较小）</td></tr>
+            <tr><td class="key">主题/UI 定制</td><td class="yes">✅ 主题 + 扩展自定义 UI（很强）</td><td class="part">🔌 output styles/主题有限</td><td class="part">🔌 主题有限</td></tr>
+            <tr><td class="key">Token/成本统计</td><td class="yes">✅ 内置（含缓存命中率）</td><td class="yes">✅ 内置</td><td class="yes">✅ 内置</td></tr>
+            <tr><td class="key">会话分享/导出</td><td class="yes">✅ /export HTML、/share Gist、HF 发布</td><td class="yes">✅ /export、分享</td><td class="yes">✅ 分享/导出</td></tr>
+            <tr><td class="key">默认权限提示</td><td class="no">无（设计选择）</td><td class="yes">✅ 每次操作确认</td><td class="yes">✅ 审批模式</td></tr>
+            <tr><td class="key">安装方式</td><td>npm / curl 安装脚本 / 二进制</td><td>npm / native installer</td><td>npm / brew / 二进制</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="cmp-philosophy"><span class="dot">●</span>设计哲学差异（售前沟通要点）</h3>
+      <div class="grid c3">
+        <div class="card"><span class="tag">Pi</span><h4>"可编程优先"</h4><p>把子代理、Plan、MCP、权限弹窗等都视为"可被扩展实现的能力"而非"内置功能"，追求<strong>最小内核 + 最大自由度</strong>。适合希望深度定制、统一到自有平台/流水线的团队。</p></div>
+        <div class="card"><span class="tag g">Claude Code</span><h4>"开箱即用"</h4><p>把子代理、Plan 模式、MCP、Hooks、权限系统等直接内置，<strong>上手即完整</strong>，配合 Anthropic 生态（Claude 模型 + 企业控制台）快速落地。</p></div>
+        <div class="card"><span class="tag o">Codex</span><h4>"安全沙箱 + 云端协同"</h4><p>强调<strong>内置沙箱安全</strong>与<strong>云端/IDE 多端协同</strong>，与 OpenAI 模型深度绑定，适合重视隔离与云协作的团队。</p></div>
+      </div>
+
+      <h3 id="cmp-choice"><span class="dot">●</span>选型建议（面向售前方案）</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>客户场景</th><th>推荐</th><th>理由</th></tr></thead>
+          <tbody>
+            <tr><td class="key">需要多模型/多云/本地模型，避免供应商锁定</td><td>Pi</td><td>30+ Provider + llama.cpp 本地，模型中立，MIT 开源可控</td></tr>
+            <tr><td class="key">需要深度定制 Agent、嵌入自有平台/CI</td><td>Pi</td><td>SDK + RPC + JSON + 扩展，可编程性最强</td></tr>
+            <tr><td class="key">已有 Anthropic/Claude 生态，追求开箱即用</td><td>Claude Code</td><td>功能完整、Hooks/权限/子代理成熟、企业支持完善</td></tr>
+            <tr><td class="key">已有 OpenAI/ChatGPT 生态，重视沙箱隔离与云端协作</td><td>Codex</td><td>内置沙箱、云端/IDE 多端、与 OpenAI 深度集成</td></tr>
+            <tr><td class="key">企业合规：需要内置权限审批/沙箱即得即用</td><td>Claude Code / Codex</td><td>两者内置权限与沙箱能力更"即插即用"；Pi 需额外扩展/容器方案</td></tr>
+            <tr><td class="key">开源、可审计、可二次开发、无许可成本</td><td>Pi</td><td>MIT 协议，代码透明，可自由修改与再分发</td></tr>
+            <tr><td class="key">统一复用已有 Claude/Codex Skills 资产</td><td>Pi / 均可</td><td>Pi 可直接读取 ~/.claude/skills 与 ~/.codex/skills</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout green">
+        <span class="t">售前一句话总结</span>
+        <strong>Pi 是"乐高底座"</strong>—— 给你最小但极其可扩展的内核，把决策权留给你的团队与平台；<strong>Claude Code 与 Codex 是"精装整机"</strong>—— 功能完整、生态绑定、开箱即用。选择取决于客户是"要自由定制"还是"要快速落地"。
+      </div>
+    </section>
+
+    <!-- ================= 05 学习路径 ================= -->
+    <section id="roadmap">
+      <h2><span class="num">05</span>学习路径与资源</h2>
+      <h3><span class="dot">●</span>建议学习顺序</h3>
+      <ol>
+        <li><strong>安装与首跑</strong>：npm 安装 → <code>/login</code> 认证 → 完成一次读写改 + bash 的简单任务。</li>
+        <li><strong>掌握会话</strong>：体验 <code>/tree</code>、<code>/fork</code>、<code>/clone</code>、<code>/compact</code>、<code>pi -c / -r</code>。</li>
+        <li><strong>理解扩展</strong>：阅读 docs/extensions.md，写一个最小扩展（注册工具/拦截 tool_call）。</li>
+        <li><strong>上手 Skills / 包</strong>：复用 Claude Code 技能目录，尝试 <code>pi install</code> 第三方包。</li>
+        <li><strong>深入架构</strong>：读 SDK、RPC、session-format、compaction 文档，理解 Agent 循环与事件流。</li>
+        <li><strong>集成实践</strong>：用 SDK/RPC 把 Pi 嵌入自有应用或 CI 流水线。</li>
+      </ol>
+      <h3><span class="dot">●</span>关键资源</h3>
+      <div class="kv">
+        <div class="k">官网</div><div class="v"><a href="https://pi.dev" target="_blank">https://pi.dev</a></div>
+        <div class="k">源码（monorepo）</div><div class="v"><a href="https://github.com/earendil-works/pi-mono" target="_blank">github.com/earendil-works/pi-mono</a></div>
+        <div class="k">npm 包</div><div class="v"><code>@earendil-works/pi-coding-agent</code></div>
+        <div class="k">设计理念博客</div><div class="v"><a href="https://mariozechner.at/posts/2025-11-30-pi-coding-agent/" target="_blank">mariozechner.at · pi-coding-agent 博文</a>；<a href="https://mariozechner.at/posts/2025-11-02-what-if-you-dont-need-mcp/" target="_blank">"不需要 MCP"论证</a></div>
+        <div class="k">技能标准</div><div class="v"><a href="https://agentskills.io" target="_blank">https://agentskills.io</a></div>
+        <div class="k">社区</div><div class="v">Discord（见官网）</div>
+        <div class="k">官方文档</div><div class="v">docs/ 目录：extensions、sdk、rpc、session-format、compaction、security、providers、packages、skills、themes、settings 等</div>
+      </div>
+    </section>
+
+    <footer>
+      <p>本指南由 Pi 编码代理根据官方文档（README + docs/，v0.85.1）整理生成，面向云计算售前解决方案架构师。</p>
+      <p>注意：Claude Code 与 OpenAI Codex 的功能对比基于公开信息整理，三者均在快速迭代，请以各产品官方最新文档为准。</p>
+      <p>Pi is licensed under MIT · 文档整理于 <code>airepo/pi_sty</code></p>
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

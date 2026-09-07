@@ -81,10 +81,26 @@
 
 ```
 airepo/
-└── devops-complete-guide.html   # DevOps 完整流程学习指南（自包含单文件，约 4.5 MB）
+├── devops_sdy/
+│   └── devops-complete-guide.html        # DevOps 完整流程学习指南（自包含单文件）
+└── pi_sty/
+    └── pi-agent-learning-guide.html      # Pi Coding Agent 学习指南（自包含单文件）
 ```
 
-> 全仓库仅此一个文件：指南即网页，网页即指南。
+> 每个目录一份自包含单文件 HTML 指南：指南即网页，网页即指南。
+
+---
+
+## 🤖 Pi Coding Agent 学习指南
+
+仓库中的 `pi_sty/pi-agent-learning-guide.html` 是一份**面向云计算售前解决方案架构师**的 Pi Coding Agent 学习材料（约 50 KB，单文件、零依赖、离线可读），系统覆盖：
+
+1. **基本概念** —— Pi 是什么、核心理念与设计哲学、关键术语表、安装快速上手；
+2. **技术架构** —— 分层架构图、monorepo 核心模块、运行时组件、Agent 执行循环、JSONL 会话树模型、四种运行模式与 SDK；
+3. **技术特性** —— 极简内核 + 扩展、多模型多 Provider 与本地模型、会话分支、上下文压缩、消息队列、Skills / 模板 / 主题 / 包、信任与安全、可编程性；
+4. **对比分析** —— Pi vs Claude Code vs OpenAI Codex 的概览、功能维度详细对比表、设计哲学差异与售前选型建议。
+
+直接用浏览器打开即可阅读。
 
 ---
 
